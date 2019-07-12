@@ -1,0 +1,8 @@
+﻿/* Template */
+
+body {
+  background-color: #333333;
+  color: #ffffff;
+  font-family: verdana; /* took out calibri, it is loading as times new roman on other computers */
+  text-align: center;
+}
