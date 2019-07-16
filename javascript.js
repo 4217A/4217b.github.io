@@ -22,7 +22,20 @@ var endCountRR = 0;
 
 // creating sprite image to be used to draw on canvas
 const sprite = new Image();
+const spritegoodguy = new Image();
+
 sprite.src = "img/sprite.png";
+spritegoodguy.src = "img/sprite goodguy.png";
+
+// creating sound to be used to draw on canvas
+// need to create a variable for each sound file
+const mysound = new Audio();
+const scoresound = new Audio();
+const endsound = new Audio();
+
+mysound.src = "audio/99sounds loop_008.wav";
+scoresound.src ="audio/Generdyn_HITS_04.wav";
+endsound.src ="audio/Generdyn_HITS_14.wav";
 
 // GAME STATE 
 const gamestate = {
@@ -34,7 +47,7 @@ const gamestate = {
 
 // RR CONTROL THE GAME with Click
 //document.addEventListener("click", function(evt){
-  //bird.flap();
+  //goodguy.bounce();
 //});
 
 // CONTROL THE GAME
@@ -58,6 +71,8 @@ document.addEventListener("keydown", function(evt){
       // if at Start change to Play
       case gamestate.Start:
         gamestate.Current = gamestate.Play;
+        mysound.loop = true; //RR set audio to loop
+	mysound.play(); //RR play background sound remove
         break;
 
       // if at Play do nothing
@@ -72,7 +87,10 @@ document.addEventListener("keydown", function(evt){
         endCountRR = 0;
 
         // reset score
-        bird.score = 0;
+        goodguy.score = 0;
+
+        // reset goodsprite animation
+        goodguy.stopanimation = 0;
 
         break;      
     }
@@ -129,18 +147,18 @@ document.addEventListener("keyup", function(evt){
 
 
 // create object with name for each item to be drawn
-// bird
-const bird = {
+// goodguy
+const goodguy = {
   // animation array to display different sprites to animate movement
   animation: [
-    {sX: 276, sY: 112}, // index 0
-    {sX: 276, sY: 139}, // index 1 bird will go up 1 px
-    {sX: 276, sY: 164}, // index 2 bird will go down 1 px
-    {sX: 276, sY: 139} // index 3 bird will go up 1 px - this is the second sprite repeated before going back to first
+    {sX: 0, sY: 0}, // index 0
+    {sX: 0, sY: 26}, // index 1 goodguy will go up 1 px
+    {sX: 0, sY: 52}, // index 2 goodguy will go down 1 px
+    {sX: 0, sY: 26} // index 3 goodguy will go up 1 px - this is the second sprite repeated before going back to first
   ],
 
-  sX: 276,
-  sY: 112,
+  sX: 0,
+  sY: 0,
   w: 34,
   h: 26,
   x: 50,
@@ -150,18 +168,20 @@ const bird = {
   prevxpos: 0, // keep track of prev x pos RR del later
   prevypos: 0, // keep track of prev y pos RR del later
 
-  radius: 12, // this is the radius of the circle bird used for pipes collision detection
+  radius: 12, // this is the radius of the circle goodguy used for walls collision detection
 
   frame: 0, // this is for the animation array
-  period: 7, // this is how fast the bird flaps
-  speed: 0, // this is how fast the bird moves up or down
-  gravity: 0.07, // this is the gravity pulling the bird down
+  period: 7, // this is how fast the goodguy bounces
+  speed: 0, // this is how fast the goodguy moves up or down
+  gravity: 0.07, // this is the gravity pulling the goodguy down
   jump: 1.47, // number of pixels that jump up
 
   score: 0, // this is to keep score
 
-  //flap method
-  flap: function(){
+  stopanimation: 0, // for when the goodsprite touches the ground
+
+  //bounce method
+  bounce: function(){
     this.speed = - this.jump;
   },
 
@@ -182,92 +202,99 @@ const bird = {
 
   // update method for updating frame and position
   updateObj: function(){
-    // use modulus to return remainder number
-    // only incriment bird frame by 1 every 5 game frames
-    // 5 will be replaced by period variable to make the speed adjustable
-    // greater period number will make the bird flap more slowly
-    if (frames % this.period == 0) {
-      // increment bird frame
-      this.frame = this.frame + 1;
+
+    // only if goodguy hasnt touched ground from game over
+    if (this.stopanimation == 0){    
+      // use modulus to return remainder number
+      // only incriment goodguy frame by 1 every 5 game frames
+      // 5 will be replaced by period variable to make the speed adjustable
+      // greater period number will make the goodguy bounce more slowly
+      if (frames % this.period == 0) {
+        // increment goodguy frame
+        this.frame = this.frame + 1;
       
-      // use modulus to return remaineder which will be the index of the animation array - this is a little tricky
-      // use the length of the animation array to determine what the modulus should be
-      this.frame = this.frame % this.animation.length;  
+        // use modulus to return remaineder which will be the index of the animation array - this is a little tricky
+        // use the length of the animation array to determine what the modulus should be
+        this.frame = this.frame % this.animation.length;  
+      }
     }
 
-    // check pipe collision first AND score
-    for (let i = 0; i < pipes.position.length; i++){
+    // check wall collision first AND score
+    for (let i = 0; i < walls.position.length && gamestate.Current != gamestate.Over; i++){
       // local variables
-      let p = pipes.position[i]; // pipe array entry with x, y and pass values
+      let p = walls.position[i]; // wall array entry with x, y and pass values
 
-      // collision detection for the pipes
+      // collision detection for the walls
       if (
-          // center collision point top pipe
+          // center collision point top wall
           (this.x + this.radius >= p.x &&
-           this.x - this.radius <= p.x + pipes.w &&
+           this.x - this.radius <= p.x + walls.w &&
            this.y + this.radius >= p.y &&
-           this.y - this.radius <= p.y + pipes.h)
+           this.y - this.radius <= p.y + walls.h)
            ||
-          // top collision point top pipe
+          // top collision point top wall
           (this.x + this.radius >= p.x &&
-           this.x + this.radius <= p.x + pipes.w &&
+           this.x + this.radius <= p.x + walls.w &&
            this.y               >= p.y &&
-           this.y               <= p.y + pipes.h)
+           this.y               <= p.y + walls.h)
            ||
-          // center collision point bottom pipe
+          // center collision point bottom wall
           (this.x + this.radius >= p.x &&
-           this.x - this.radius <= p.x + pipes.w &&
-           this.y + this.radius >= p.y + pipes.h + pipes.gap &&
-           this.y - this.radius <= p.y + pipes.h + pipes.gap + pipes.h)
+           this.x - this.radius <= p.x + walls.w &&
+           this.y + this.radius >= p.y + walls.h + walls.gap &&
+           this.y - this.radius <= p.y + walls.h + walls.gap + walls.h)
            ||
-          // bottom collision point bottom pipe
+          // bottom collision point bottom wall
           (this.x               >= p.x &&
-           this.x               <= p.x + pipes.w &&
-           this.y + this.radius >= p.y + pipes.h + pipes.gap &&
-           this.y + this.radius <= p.y + pipes.h + pipes.gap + pipes.h)
+           this.x               <= p.x + walls.w &&
+           this.y + this.radius >= p.y + walls.h + walls.gap &&
+           this.y + this.radius <= p.y + walls.h + walls.gap + walls.h)
          ){
-           gamestate.Current = gamestate.Over;
+
+           // call function to end game
+           endgame();
         }
 
-      // check if the pipe has not been passed
+      // check if the wall has not been passed
       if (p.passed == 0){
-        // did the bird pass the pipe
-        if (this.x - this.radius >= p.x + pipes.w){
-        p.passed = 1; // set flag if passed
-        this.score = this.score + 1; // increment score
+        // did the goodguy pass the wall
+        if (this.x - this.radius >= p.x + walls.w){
+          p.passed = 1; // set flag if passed
+          this.score = this.score + 1; // increment score
+          scoresound.play(); //play score sound
         }
       }
     }
 
-    // this is to move the bird up
+    // this is to move the goodguy up
     if (myKeys[32] == 1 || myKeys[38]) {
       if (gamestate.Current == gamestate.Play){
-        bird.flap();
+        goodguy.bounce();
       }
     }
 
-    // this is to move the bird down
+    // this is to move the goodguy down
     if (myKeys[40] == 1) {
-      bird.moveDown();
+      goodguy.moveDown();
     }
 
-    // this is to move the bird to the right
+    // this is to move the goodguy to the right
     if (myKeys[39] == 1) {
       if (gamestate.Current == gamestate.Play){
-        bird.moveRight();
+        goodguy.moveRight();
       }
     }
 
-    // this is to move the bird to the left
+    // this is to move the goodguy to the left
     if (myKeys[37] == 1) {
       if (gamestate.Current == gamestate.Play){
-        bird.moveLeft();
+        goodguy.moveLeft();
       }
     }
     
     // this is to animate the y position
     if (gamestate.Current == gamestate.Start){
-      // keep bird at top with speed 0
+      // keep goodguy at top with speed 0
       this.x = 50;
       this.y = 77;
       this.speed = 0;        
@@ -283,22 +310,27 @@ const bird = {
       this.y = this.y + this.speed;
     }
 
-    //this is so that the lowest that the bird can go is the ground (foreground)
+    //this is so that the lowest that the goodguy can go is the ground (foreground)
     if (this.y + this.h/2 >= cvs.height-fg.h){
       this.y = cvs.height - fg.h - this.h/2;
+      
+      // add check if game over stop animating
+      if (gamestate.Current == gamestate.Over){
+        this.stopanimation = 1; // set this to stop animation
+      }
     }
 
-    //this is so that the highest that the bird can go is the top of the canvas
+    //this is so that the highest that the goodguy can go is the top of the canvas
     if (this.y - this.h/2 <= 0){
       this.y = 0 + this.h/2;
     }
 
-    //this is so that the most right that the bird can go is the end of canvas
+    //this is so that the most right that the goodguy can go is the end of canvas
     if (this.x + this.w/2 >= cvs.width){
       this.x = cvs.width - this.w/2;
     }
 
-    //this is so that the most left that the bird can go is the beginning of the canvas
+    //this is so that the most left that the goodguy can go is the beginning of the canvas
     if (this.x - this.w/2 <= 0){
       this.x = 0 + this.w/2;
     }
@@ -308,14 +340,14 @@ const bird = {
   // draw method
   drawObj: function(){
     // variable to equal the sprite used in array
-    let birdAnimation = this.animation[this.frame];
+    let goodguyAnimation = this.animation[this.frame];
 
     // this is to draw the image onto the canvas
     // source image, source x, source y, source width, source height, destination x, dest y, dest width, dest height
-    // using birdAnimation sX and sY from array
-    // centering bird by subtracting half of its width and height
+    // using goodguyAnimation sX and sY from array
+    // centering goodguy by subtracting half of its width and height
 
-    ctx.drawImage(sprite, birdAnimation.sX, birdAnimation.sY, this.w, this.h, this.x -this.w/2, this.y - this.h/2, this.w, this.h); 
+    ctx.drawImage(spritegoodguy, goodguyAnimation.sX, goodguyAnimation.sY, this.w, this.h, this.x -this.w/2, this.y - this.h/2, this.w, this.h); 
   }
 }
 
@@ -401,8 +433,8 @@ const fg = {
   }
 }
 
-// pipes
-const pipes = {
+// walls
+const walls = {
   bottom: {
     sX: 502, // end 553
     sY: 0 // end 399
@@ -417,66 +449,68 @@ const pipes = {
   h: 399,
 
   gap: 85,
-  maxYPos: -150, // the max y position of the top pipe
-  position: [], // this is an empty array to hold the random pipe positions so it can be redrawn correctly
+  maxYPos: -150, // the max y position of the top wall
+  position: [], // this is an empty array to hold the random wall positions so it can be redrawn correctly
 
   frame: 0, // this is for the animation array
-  period: 5, // this is how fast the pipes move
+  period: 5, // this is how fast the walls move
   move: -2, // this is the number of pixels for the foreground to move
 
   // update method for updating frame and position
   updateObj: function(){
-    // only update pipes if game is in play
+    // only update walls if game is in play
     if (gamestate.Current == gamestate.Play){
-    // generate new y position for new pipe every period*num frames
-    // num is pipe spacing
+    // generate new y position for new wall every period*num frames
+    // num is wall spacing
       if (frames % (this.period * 100) == 0){
         // here we will ad an object that has x and y for each array entry
         this.position.push(
           {
           x: cvs.width, // start at end of canvas
           y: this.maxYPos * (Math.random() + 1), // random gives number between 0 and 1
-          passed: 0 // keep track if pipe is passed for score
+          passed: 0 // keep track if wall is passed for score
           }
         );
       }
     }
 
-    // clear pipes if game state set to start
+    // clear walls if game state set to start
     if (gamestate.Current == gamestate.Start){
-      // this is to clear the array so that when you restart the pipes are erased
+      // this is to clear the array so that when you restart the walls are erased
       this.position.length = 0;
     }
     
-    for (let i = 0; i < this.position.length; i++){
+    for (let i = 0; i < this.position.length && gamestate.Current != gamestate.Over; i++){
     // count frames to get update frame for object
       if (frames % this.period == 0) {
-        // check to see if the bird is inside the top pipe
-        // collision detection for the pipes
-        let p = this.position[i]; // pipe array entry with x and y values        
+        // check to see if the goodguy is inside the top wall
+        // collision detection for the walls
+        let p = this.position[i]; // wall array entry with x and y values        
 
         if ( 
-            // top pipe
-            (bird.x + bird.radius >= p.x &&
-             bird.x - bird.radius <= p.x + this.w &&
-             bird.y + bird.radius >= p.y &&
-             bird.y - bird.radius <= p.y + this.h)
+            // top wall
+            (goodguy.x + goodguy.radius >= p.x &&
+             goodguy.x - goodguy.radius <= p.x + this.w &&
+             goodguy.y + goodguy.radius >= p.y &&
+             goodguy.y - goodguy.radius <= p.y + this.h)
              ||
-            // bottom pipe
-            (bird.x + bird.radius >= p.x &&
-             bird.x - bird.radius <= p.x + this.w &&
-             bird.y + bird.radius >= p.y + this.h + this.gap &&
-             bird.y - bird.radius <= p.y + this.h + this.gap + this.h)
+            // bottom wall
+            (goodguy.x + goodguy.radius >= p.x &&
+             goodguy.x - goodguy.radius <= p.x + this.w &&
+             goodguy.y + goodguy.radius >= p.y + this.h + this.gap &&
+             goodguy.y - goodguy.radius <= p.y + this.h + this.gap + this.h)
            ){
-             gamestate.Current = gamestate.Over;
-             this.lastxpos = p.x - bird.radius; // position to draw the bird if there is a collision
+             // call function to end game
+             endgame();
+
+             this.lastxpos = p.x - goodguy.radius; // position to draw the goodguy if there is a collision
         } 
 
-        // increment pipes frame
+        // increment walls frame
         this.frame = this.frame + 1;
         this.position[i].x = this.position[i].x + this.move;
 
-        // remove pipes if they have left the canvas area 
+        // remove walls if they have left the canvas area 
         if (this.position[i].x + this.w <= 0) {
           this.position.shift(); // this will remove the first entry in the array
         }
@@ -485,12 +519,12 @@ const pipes = {
   },
 
   drawObj: function(){
-    // draw each pipe created in position array
+    // draw each wall created in position array
     for (let i = 0; i < this.position.length; i++){
-      // draw top pipe
+      // draw top wall
       ctx.drawImage(sprite, this.top.sX, this.top.sY, this.w, this.h, this.position[i].x, this.position[i].y, this.w, this.h); 
 
-      // draw bottom pipe
+      // draw bottom wall
       ctx.drawImage(sprite, this.bottom.sX, this.bottom.sY, this.w, this.h, this.position[i].x, this.position[i].y + this.h + this.gap, this.w, this.h); 
     }
   }
@@ -531,7 +565,7 @@ const gameoversplash = {
     ctx.fillStyle = "#1c1c1c"; //remember to change fillstyle when drawing something new
     ctx.font = "70px Arial";
     // write score at x345ish ybot323ish
-    ctx.fillText(bird.score,this.x + 180,this.y + 107);
+    ctx.fillText(goodguy.score,this.x + 180,this.y + 107);
     }
   }
 }
@@ -552,8 +586,16 @@ function draw(){
   // draw first item - background
   bg.drawObj();
 
-  // draw second item - pipes
-  pipes.drawObj();
+  // RR score
+  if (goodguy.score != 0) {
+    ctx.fillStyle = "#1c1c1c"; //remember to change fillstyle when drawing something new
+    ctx.font = "70px Arial";
+    // write score at x345ish ybot323ish
+    ctx.fillText(goodguy.score,gameoversplash.x + 180,gameoversplash.y + 107);
+  }
+
+  // draw second item - walls
+  walls.drawObj();
 
   // draw third item - foreground
   fg.drawObj();
@@ -581,36 +623,24 @@ function draw(){
   //ctx.fillText(fg.x,100,200);
   //ctx.fillText(bg.x.toFixed(1),100,225); //toFixed so that will only show one decimal
 
-  //ctx.fillText("pipe array",100,250);
-  //ctx.fillText(pipes.position.length,250,250);
+  //ctx.fillText("wall array",100,250);
+  //ctx.fillText(walls.position.length,250,250);
 
   // post score when ground is touched
   // if endCount not set
 
   if (endCountRR == 0) {
-    // if bird has hit the ground
-    if (bird.y + bird.h/2 >= cvs.height-fg.h) {
+    // if goodguy has hit the ground
+    if (goodguy.y + goodguy.h/2 >= cvs.height-fg.h) {
       endCountRR = frames; // set end count
 
-      // set gamestate to game over
-      gamestate.Current = gamestate.Over;
+      // call function to end game
+      endgame();
       }
   }
 
-  // RR score
-  //ctx.fillText(bird.score,100,200);
-
-  // write score if end
-  //if (endCountRR != 0) {
-    //ctx.fillText(bird.score,100,300);
-  //}
-  // RRRRRRRRRRRRRRRRRRRRRRRRRRRR
-  // RRRRRRRRRRRRRRRRRRRRRRRRRRRR
-  // RRRRRRRRRRRRRRRRRRRRRRRRRRRR
-
-
-  // draw last item - bird
-  bird.drawObj();
+  // draw last item - goodguy
+  goodguy.drawObj();
 }
 
 function update(){
@@ -619,15 +649,17 @@ function update(){
     // update first item - background
     bg.updateObj();
 
-    // update second item - pipes
-    pipes.updateObj();
+    // update second item - walls
+    walls.updateObj();
 
     // update third item - foreground
     fg.updateObj();
+
   }
 
-  // update last item - bird
-  bird.updateObj();
+    // update last item - goodguy
+    goodguy.updateObj();
+
 }
 
 // loop will call the draw function
@@ -645,6 +677,20 @@ function loop(){
   // call back to loop function that will be called on average 50 times per sec
   // this allows for smooth code and will only redraw when the machine is ready - http://www.javascriptkit.com/javatutors/requestanimationframe.shtml
   requestAnimationFrame(loop);
+}
+
+
+// function to set state to game over for different collisions
+function endgame(){
+  // set gamestate to game over
+  gamestate.Current = gamestate.Over;
+
+  endsound.play(); // end sound  
+
+  // stop and reset sound
+  mysound.loop = false; // remove loop setting if this stays on it will break game
+  mysound.pause(); // pause music
+  mysound.load(); // this will start file from begining again when it plays
 }
 
 
