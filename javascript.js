@@ -22,10 +22,13 @@ var endCountRR = 0;
 
 // creating sprite image to be used to draw on canvas
 const sprite = new Image();
-const spritegoodguy = new Image();
-
 sprite.src = "img/sprite.png";
+
+const spritegoodguy = new Image();
 spritegoodguy.src = "img/sprite goodguy.png";
+
+const spritemessage = new Image();
+spritemessage.src = "img/sprite message.png";
 
 // creating sound to be used to draw on canvas
 // need to create a variable for each sound file
@@ -73,6 +76,11 @@ document.addEventListener("keydown", function(evt){
         gamestate.Current = gamestate.Play;
         mysound.loop = true; //RR set audio to loop
 	mysound.play(); //RR play background sound remove
+
+        // draw the message for instructions
+        messagesplash.drawnum=0;
+        messagesplash.drawflag=1;
+
         break;
 
       // if at Play do nothing
@@ -456,10 +464,12 @@ const walls = {
   period: 5, // this is how fast the walls move
   move: -2, // this is the number of pixels for the foreground to move
 
+  pause: 0, // this is to pause the wall drawing to show messages on the screen
+
   // update method for updating frame and position
   updateObj: function(){
-    // only update walls if game is in play
-    if (gamestate.Current == gamestate.Play){
+    // only update walls if game is in play and not paused
+    if (gamestate.Current == gamestate.Play && this.pause == 0){
     // generate new y position for new wall every period*num frames
     // num is wall spacing
       if (frames % (this.period * 100) == 0){
@@ -570,6 +580,62 @@ const gameoversplash = {
   }
 }
 
+//RRRRRRRR
+// message splash screen
+const messagesplash = {
+  // this will hold the attributes for the message
+  sourcemessage: [
+  {sX: 10, // 0
+   sY: 10
+  },
+
+  {sX: 194, // 1
+   sY: 10
+  },
+
+  {sX: 378, // 2
+   sY: 10
+  },
+
+  {sX: 562, // 3
+   sY: 10
+  }
+  ],
+  
+  w: 174,
+  h: 159,
+  x: cvs.width/2 - 174/2, // center on x based on width
+  y: cvs.height/5, // top one fifth
+
+  drawnum: 2, // this is the message number that should be drawn
+  drawflag: 0, // when set to 1 this will start the draw cycle
+  
+  period: 10, // period 10 and maxtime 5 is about 1 second
+  maxtime: 25, // 25 is 5 seconds
+  frame: 0,
+
+  drawObj: function(){
+    // only draw if draw flag is set - the code will set the drawnum and drawflag to activate this draw
+    if (this.drawflag == 1){
+      ctx.drawImage(spritemessage, this.sourcemessage[this.drawnum].sX, this.sourcemessage[this.drawnum].sY, this.w, this.h, this.x, this.y, this.w, this.h);    
+
+      walls.pause=1; // pause the walls
+
+      if (frames % this.period == 0){
+        // increment message frame and draw
+        this.frame = this.frame + 1;
+      }
+
+      if (this.frame >= this.maxtime){
+        this.drawflag=0; // stop drawing
+        this.frame=0; // reset this frame
+        walls.pause=0; // walls continue
+      }
+    }
+  }
+}
+
+
 
 // ***********************************
 // FUNctions Defined
@@ -602,6 +668,13 @@ function draw(){
 
   // draw start splash screen
   startsplash.drawObj();
+
+  // draw message splash screen
+  messagesplash.drawObj();
+  // RRdebug
+  //ctx.fillStyle = "#000000"; //remember to change fillstyle when drawing something new
+  //ctx.font = "30px Arial";
+  //ctx.fillText(messagesplash.frame,100,100);
 
   // draw game over splash screen
   gameoversplash.drawObj();
@@ -686,6 +759,9 @@ function endgame(){
   gamestate.Current = gamestate.Over;
 
   endsound.play(); // end sound  
+
+  messagesplash.drawflag=0; // end message if there is one
+  messagesplash.frame=0; // reset frame incase in the middle of message
 
   // stop and reset sound
   mysound.loop = false; // remove loop setting if this stays on it will break game
