@@ -100,6 +100,9 @@ document.addEventListener("keydown", function(evt){
         // reset goodsprite animation
         goodguy.stopanimation = 0;
 
+        // reset game frames
+        frames = 0;
+
         break;      
     }
   }
@@ -488,6 +491,7 @@ const walls = {
     if (gamestate.Current == gamestate.Start){
       // this is to clear the array so that when you restart the walls are erased
       this.position.length = 0;
+      this.frame = 0; // reset wall frame
     }
     
     for (let i = 0; i < this.position.length && gamestate.Current != gamestate.Over; i++){
@@ -559,23 +563,51 @@ const startsplash = {
 
 // game over splash screen
 const gameoversplash = {
-  sX: 174, // end 400
-  sY: 228, // end 427
-  w: 226,
-  h: 199,
-  x: cvs.width/2 - 226/2,
+//changing this gameoversplash
+  sourcegameover: [
+  {sX: 10, // 0
+   sY: 179
+  },
+
+  {sX: 194, // 1
+   sY: 179
+  },
+
+  {sX: 378, // 2
+   sY: 179
+  },
+
+  {sX: 562, // 3
+   sY: 179
+  }
+  ],
+
+  w: 174,
+  h: 159,
+  x: cvs.width/2 - 174/2,
   y: cvs.height/5, // top one fifth
+
+  // select end splash screen based on score
+  select: 0,
 
   drawObj: function(){
     // only draw if gamestate is at Over
     if (gamestate.Current == gamestate.Over){
-    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x, this.y, this.w, this.h);
 
-    // RR score
-    ctx.fillStyle = "#1c1c1c"; //remember to change fillstyle when drawing something new
-    ctx.font = "70px Arial";
-    // write score at x345ish ybot323ish
-    ctx.fillText(goodguy.score,this.x + 180,this.y + 107);
+      // set based on score
+      if (goodguy.score >= 10) {
+        this.select = 1;
+      } else {
+        this.select = 0;
+      }
+
+      ctx.drawImage(spritemessage, this.sourcegameover[this.select].sX, this.sourcegameover[this.select].sY, this.w, this.h, this.x, this.y, this.w, this.h);
+
+      // RR score
+      ctx.fillStyle = "#1c1c1c"; //remember to change fillstyle when drawing something new
+      ctx.font = "70px Arial";
+      // write score at x345ish ybot323ish
+      ctx.fillText(goodguy.score,this.x + 165,this.y + 107);
     }
   }
 }
@@ -657,7 +689,7 @@ function draw(){
     ctx.fillStyle = "#1c1c1c"; //remember to change fillstyle when drawing something new
     ctx.font = "70px Arial";
     // write score at x345ish ybot323ish
-    ctx.fillText(goodguy.score,gameoversplash.x + 180,gameoversplash.y + 107);
+    ctx.fillText(goodguy.score,gameoversplash.x + 165,gameoversplash.y + 107);
   }
 
   // draw second item - walls
@@ -689,12 +721,11 @@ function draw(){
   //ctx.font = "30px Arial";
   //ctx.fillText(frames,100,100);
 
-  // display frame number RRdebug
+  // display RRdebug
   
   ctx.fillStyle = "#000000"; //remember to change fillstyle when drawing something new
   ctx.font = "30px Arial";
-  //ctx.fillText(fg.x,100,200);
-  //ctx.fillText(bg.x.toFixed(1),100,225); //toFixed so that will only show one decimal
+  //ctx.fillText(frames,100,200);
 
   //ctx.fillText("wall array",100,250);
   //ctx.fillText(walls.position.length,250,250);
