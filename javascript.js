@@ -78,7 +78,7 @@ document.addEventListener("keydown", function(evt){
 	mysound.play(); //RR play background sound remove
 
         // draw the message for instructions
-        messagesplash.drawnum=0;
+        messagesplash.drawnum=goodguy.level;
         messagesplash.drawflag=1;
 
         break;
@@ -95,13 +95,30 @@ document.addEventListener("keydown", function(evt){
         endCountRR = 0;
 
         // reset score
-        goodguy.score = 0;
-
+        if (goodguy.level == 0){
+          goodguy.score = 0;
+        }
+        else if (goodguy.level == 1){
+          goodguy.score = 10;
+        }
+        else if (goodguy.level == 2){
+          goodguy.score = 20;
+        }
+        
         // reset goodsprite animation
         goodguy.stopanimation = 0;
 
         // reset game frames
         frames = 0;
+
+        // keep leve when person good guy dies
+        //goodguy.level = 0;
+
+        // reset walls drawn
+        walls.drawn = 0;
+
+        // reset walls deleted
+        walls.deleted = 0;
 
         break;      
     }
@@ -161,11 +178,27 @@ document.addEventListener("keyup", function(evt){
 // goodguy
 const goodguy = {
   // animation array to display different sprites to animate movement
-  animation: [
+  animationlev1: [
     {sX: 0, sY: 0}, // index 0
     {sX: 0, sY: 26}, // index 1 goodguy will go up 1 px
     {sX: 0, sY: 52}, // index 2 goodguy will go down 1 px
     {sX: 0, sY: 26} // index 3 goodguy will go up 1 px - this is the second sprite repeated before going back to first
+  ],
+
+  // animation array to display different sprites to animate movement
+  animationlev2: [
+    {sX: 35, sY: 0}, // index 0
+    {sX: 35, sY: 26}, // index 1 goodguy will go up 1 px
+    {sX: 35, sY: 52}, // index 2 goodguy will go down 1 px
+    {sX: 35, sY: 26} // index 3 goodguy will go up 1 px - this is the second sprite repeated before going back to first
+  ],
+
+  // animation array to display different sprites to animate movement
+  animationlev3: [
+    {sX: 70, sY: 0}, // index 0
+    {sX: 70, sY: 26}, // index 1 goodguy will go up 1 px
+    {sX: 70, sY: 52}, // index 2 goodguy will go down 1 px
+    {sX: 70, sY: 26} // index 3 goodguy will go up 1 px - this is the second sprite repeated before going back to first
   ],
 
   sX: 0,
@@ -184,21 +217,22 @@ const goodguy = {
   frame: 0, // this is for the animation array
   period: 7, // this is how fast the goodguy bounces
   speed: 0, // this is how fast the goodguy moves up or down
-  gravity: 0.07, // this is the gravity pulling the goodguy down
-  jump: 1.47, // number of pixels that jump up
+  gravity: [0.07, 0.05, 0.075], // this is the gravity pulling the goodguy down
+  jump: [1.47, 1.37, 1.97], // number of pixels that jump up
 
   score: 0, // this is to keep score
+  level: 0, // to keep track of level
 
   stopanimation: 0, // for when the goodsprite touches the ground
 
   //bounce method
   bounce: function(){
-    this.speed = - this.jump;
+    this.speed = - this.jump[this.level];
   },
 
   //moveDown method
   moveDown: function(){
-    this.speed = this.jump * 1.5;
+    this.speed = this.jump[this.level] * 1.5;
   },
 
   //moveRight method
@@ -226,7 +260,7 @@ const goodguy = {
       
         // use modulus to return remaineder which will be the index of the animation array - this is a little tricky
         // use the length of the animation array to determine what the modulus should be
-        this.frame = this.frame % this.animation.length;  
+        this.frame = this.frame % this.animationlev1.length;  
       }
     }
 
@@ -272,7 +306,10 @@ const goodguy = {
         if (this.x - this.radius >= p.x + walls.w){
           p.passed = 1; // set flag if passed
           this.score = this.score + 1; // increment score
-          scoresound.play(); //play score sound
+
+          scoresound.pause(); // pause music
+          scoresound.load(); // this will start file from begining again when it plays
+          scoresound.play(); //play score sound 
         }
       }
     }
@@ -311,13 +348,13 @@ const goodguy = {
       this.speed = 0;        
     }
     else if (gamestate.Current == gamestate.Play){
-      this.speed = this.speed + this.gravity;
+      this.speed = this.speed + this.gravity[this.level];
       this.y = this.y + this.speed;
     }
     else {
       // drop straight down and faster
       this.speed = 0;
-      this.speed = this.speed + (this.gravity * 100);
+      this.speed = this.speed + (this.gravity[this.level] * 100);
       this.y = this.y + this.speed;
     }
 
@@ -351,7 +388,17 @@ const goodguy = {
   // draw method
   drawObj: function(){
     // variable to equal the sprite used in array
-    let goodguyAnimation = this.animation[this.frame];
+    let goodguyAnimation = this.animationlev1[this.frame];
+
+    if (this.level == 0){
+      goodguyAnimation = this.animationlev1[this.frame];
+    }
+    else if (this.level == 1){
+      goodguyAnimation = this.animationlev2[this.frame];
+    }
+    else if (this.level == 2){
+      goodguyAnimation = this.animationlev3[this.frame];
+    }
 
     // this is to draw the image onto the canvas
     // source image, source x, source y, source width, source height, destination x, dest y, dest width, dest height
@@ -371,13 +418,13 @@ const bg = {
   x: 0,
   y: cvs.height - 228, // this takes into account the canvas size
   frame: 0, // this is for the animation array
-  period: 7, // this is how fast the background moves
+  period: [7, 6, 5], // this is how fast the background moves
   move: -0.7, // this is the number of pixels for the background to move
 
   // update method for updating frame and position
   updateObj: function(){
     // count frames to get update frame for object
-    if (frames % this.period == 0) {
+    if (frames % this.period[goodguy.level] == 0) {
       // increment background frame
       this.frame = this.frame + 1;
       this.x = this.x + this.move;
@@ -389,13 +436,14 @@ const bg = {
   },
 
   drawObj: function(){
-    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x, this.y, this.w, this.h); 
+    // added minus 5 7 and 9 to overlap a little for firefox it was flashing
+    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x - 5, this.y, this.w, this.h); 
 
-    // this is a second draw because the sprite file item width is too short for the canvas
-    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x + this.w, this.y, this.w, this.h);   
+    // this is a second draw because the sprite file item width is too short for the canvas 
+    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x + this.w - 7, this.y, this.w, this.h);   
 
     // this is a third draw because the background is not exactly the same that when interrupting halfway through it does not match - comment out and change x reset logic to see
-    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x + this.w + this.w, this.y, this.w, this.h);   
+    ctx.drawImage(sprite, this.sX, this.sY, this.w, this.h, this.x + this.w + this.w - 9, this.y, this.w, this.h);   
   }
 }
 
@@ -408,7 +456,7 @@ const fg = {
   x: 0,
   y: cvs.height - 111, // cannot use h here instead use the number
   frame: 0, // this is for the animation array
-  period: 7, // this is how fast the foreground moves
+  period: [7, 5, 3], // this is how fast the foreground moves
   move: -4, // this is the number of pixels for the foreground to move
 
   // this is an array to keep track of 3 fg pieces
@@ -417,7 +465,7 @@ const fg = {
   // update method for updating frame and position
   updateObj: function(){
     // count frames to get update frame for object
-    if (frames % this.period == 0) {
+    if (frames % this.period[goodguy.level] == 0) {
       // increment foreground frame
       this.frame = this.frame + 1;
 
@@ -446,25 +494,51 @@ const fg = {
 
 // walls
 const walls = {
-  bottom: {
+  bottom: [
+  {
     sX: 502, // end 553
     sY: 0 // end 399
   },  
 
-  top: {
+  {
+    sX: 613, // end 553
+    sY: 0 // end 399
+  },  
+
+  {
+    sX: 721, // end 553
+    sY: 0 // end 399
+  }
+  ],  
+
+  top: [
+  {
     sX: 554, // end 605
     sY: 0 // end 399
   },
 
+  {
+    sX: 665, // end 605
+    sY: 0 // end 399
+  },
+
+  {
+    sX: 773, // end 605
+    sY: 0 // end 399
+  }
+  ],
+
   w: 51,
   h: 399,
 
-  gap: 85,
+  gap: [85, 65, 65],
   maxYPos: -150, // the max y position of the top wall
   position: [], // this is an empty array to hold the random wall positions so it can be redrawn correctly
+  drawn: 0, // to keep track of number of walls drawn
+  deleted: 0, // to keep track of number of walls deleted
 
   frame: 0, // this is for the animation array
-  period: 5, // this is how fast the walls move
+  period: [3, 2, 1], // this is how fast the walls move
   move: -2, // this is the number of pixels for the foreground to move
 
   pause: 0, // this is to pause the wall drawing to show messages on the screen
@@ -472,18 +546,21 @@ const walls = {
   // update method for updating frame and position
   updateObj: function(){
     // only update walls if game is in play and not paused
-    if (gamestate.Current == gamestate.Play && this.pause == 0){
+    if (gamestate.Current == gamestate.Play && this.pause == 0 && this.drawn < 10){
     // generate new y position for new wall every period*num frames
     // num is wall spacing
-      if (frames % (this.period * 100) == 0){
+      if (frames % (this.period[goodguy.level] * 100) == 0){
         // here we will ad an object that has x and y for each array entry
         this.position.push(
           {
           x: cvs.width, // start at end of canvas
           y: this.maxYPos * (Math.random() + 1), // random gives number between 0 and 1
           passed: 0 // keep track if wall is passed for score
-          }
+          }      
         );
+
+        // keep track of how many are drawn
+        this.drawn = this.drawn + 1; 
       }
     }
 
@@ -496,7 +573,7 @@ const walls = {
     
     for (let i = 0; i < this.position.length && gamestate.Current != gamestate.Over; i++){
     // count frames to get update frame for object
-      if (frames % this.period == 0) {
+      if (frames % this.period[goodguy.level] == 0) {
         // check to see if the goodguy is inside the top wall
         // collision detection for the walls
         let p = this.position[i]; // wall array entry with x and y values        
@@ -511,8 +588,8 @@ const walls = {
             // bottom wall
             (goodguy.x + goodguy.radius >= p.x &&
              goodguy.x - goodguy.radius <= p.x + this.w &&
-             goodguy.y + goodguy.radius >= p.y + this.h + this.gap &&
-             goodguy.y - goodguy.radius <= p.y + this.h + this.gap + this.h)
+             goodguy.y + goodguy.radius >= p.y + this.h + this.gap[goodguy.level] &&
+             goodguy.y - goodguy.radius <= p.y + this.h + this.gap[goodguy.level] + this.h)
            ){
              // call function to end game
              endgame();
@@ -527,6 +604,41 @@ const walls = {
         // remove walls if they have left the canvas area 
         if (this.position[i].x + this.w <= 0) {
           this.position.shift(); // this will remove the first entry in the array
+          this.deleted = this.deleted + 1;
+
+          // check to see if score is 10
+          if(goodguy.score == 10 && this.deleted == 10){
+
+          // go to level 2 - 1 is used here for the arrays in wall
+          goodguy.level = 1;
+          
+          // draw the message for instructions
+          messagesplash.drawnum=goodguy.level;
+          messagesplash.drawflag=1;
+
+          // reset walls drawn so that the next 10 can be drawn
+          this.drawn = 0;
+
+          //reset deleted counter
+          this.deleted = 0;
+          }
+
+          // check to see if score is 20
+          if(goodguy.score == 20 && this.deleted == 10){
+
+          // go to level 3 - 2 is used here for the arrays in wall
+          goodguy.level = 2;
+          
+          // draw the message for instructions
+          messagesplash.drawnum=goodguy.level;
+          messagesplash.drawflag=1;
+
+          // reset walls drawn so that the next 10 can be drawn
+          this.drawn = 0;
+
+          //reset deleted counter
+          this.deleted = 0;
+          }
         }
       }
     }
@@ -536,10 +648,10 @@ const walls = {
     // draw each wall created in position array
     for (let i = 0; i < this.position.length; i++){
       // draw top wall
-      ctx.drawImage(sprite, this.top.sX, this.top.sY, this.w, this.h, this.position[i].x, this.position[i].y, this.w, this.h); 
+      ctx.drawImage(sprite, this.top[goodguy.level].sX, this.top[goodguy.level].sY, this.w, this.h, this.position[i].x, this.position[i].y, this.w, this.h); 
 
       // draw bottom wall
-      ctx.drawImage(sprite, this.bottom.sX, this.bottom.sY, this.w, this.h, this.position[i].x, this.position[i].y + this.h + this.gap, this.w, this.h); 
+      ctx.drawImage(sprite, this.bottom[goodguy.level].sX, this.bottom[goodguy.level].sY, this.w, this.h, this.position[i].x, this.position[i].y + this.h + this.gap[goodguy.level], this.w, this.h); 
     }
   }
 }
@@ -592,13 +704,20 @@ const gameoversplash = {
 
   drawObj: function(){
     // only draw if gamestate is at Over
-    if (gamestate.Current == gamestate.Over){
+    if (gamestate.Current == gamestate.Over || goodguy.score == 30){
 
       // set based on score
-      if (goodguy.score >= 10) {
-        this.select = 1;
-      } else {
+      if (goodguy.score < 10) {
         this.select = 0;
+      } 
+      else if (goodguy.score < 20) {
+        this.select = 1;
+      } 
+      else if (goodguy.score < 30) {
+        this.select = 2;
+      } 
+      else {
+        this.select = 3;
       }
 
       ctx.drawImage(spritemessage, this.sourcegameover[this.select].sX, this.sourcegameover[this.select].sY, this.w, this.h, this.x, this.y, this.w, this.h);
